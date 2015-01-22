@@ -18,12 +18,14 @@ import java.util.List;
 
 public class MainActivity extends ActionBarActivity {
     private static final int REQUEST_CODE = 0;
-    private ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1);
+    private ArrayAdapter<String> adapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1);
 
         ListView listView = (ListView) findViewById(R.id.listView);
         listView.setAdapter(adapter);
