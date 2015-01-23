@@ -1,9 +1,11 @@
 package com.example.test.transapp;
 
+import android.app.ProgressDialog;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.os.Bundle;
 import android.speech.RecognizerIntent;
+import android.speech.tts.TextToSpeech;
 import android.support.v7.app.ActionBarActivity;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -14,11 +16,15 @@ import android.widget.ListView;
 import android.widget.Toast;
 
 import java.util.List;
+import java.util.Locale;
 
 
-public class MainActivity extends ActionBarActivity {
+public class MainActivity extends ActionBarActivity implements TextToSpeech.OnInitListener {
     private static final int REQUEST_CODE = 0;
     private ArrayAdapter<String> adapter;
+    private ProgressDialog pd;
+    private String fromText;
+    private TextToSpeech tts;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -53,6 +59,8 @@ public class MainActivity extends ActionBarActivity {
                 }
             }
         });
+
+        tts = new TextToSpeech(getApplicationContext(), this);
     }
 
     @Override
@@ -67,7 +75,28 @@ public class MainActivity extends ActionBarActivity {
                 resultsString = results.get(0);
             }
 
-            adapter.add(resultsString);
+            fromText = resultsString;
+
+            // 翻訳APIにポスト
+            TransTask task = new TransTask() {
+                @Override
+                protected void onPostExecute(String o) {
+                    super.onPostExecute(o);
+                    pd.dismiss();
+                    adapter.add(fromText + "\n" + o);
+                    tts.speak(o, TextToSpeech.QUEUE_FLUSH, null);
+                }
+            };
+            task.execute(resultsString);
+
+            // インジケータ表示
+            if (pd == null) {
+                pd = new ProgressDialog(this.getApplicationContext());
+            }
+//            pd.setMessage("翻訳中...");
+//            pd.setProgressStyle(ProgressDialog.STYLE_SPINNER);
+//            pd.setCancelable(false);
+//            pd.show();
         }
         super.onActivityResult(requestCode, resultCode, data);
     }
@@ -92,5 +121,16 @@ public class MainActivity extends ActionBarActivity {
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    public void onInit(int status) {
+        if (status == TextToSpeech.SUCCESS) {
+            if (tts.isLanguageAvailable(Locale.ENGLISH) >= TextToSpeech.LANG_AVAILABLE) {
+                tts.setLanguage(Locale.ENGLISH);
+            } else {
+                Toast.makeText(this, "TTSが英語に対応していません", Toast.LENGTH_LONG);
+            }
+        }
     }
 }
