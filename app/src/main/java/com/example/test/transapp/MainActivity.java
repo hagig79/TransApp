@@ -1,6 +1,5 @@
 package com.example.test.transapp;
 
-import android.app.ProgressDialog;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.os.Bundle;
@@ -10,9 +9,11 @@ import android.support.v7.app.ActionBarActivity;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ListView;
+import android.widget.Spinner;
 import android.widget.Toast;
 
 import java.util.List;
@@ -22,9 +23,9 @@ import java.util.Locale;
 public class MainActivity extends ActionBarActivity implements TextToSpeech.OnInitListener {
     private static final int REQUEST_CODE = 0;
     private ArrayAdapter<String> adapter;
-    private ProgressDialog pd;
     private String fromText;
     private TextToSpeech tts;
+    private ArrayAdapter<String> adapterLanguage;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -36,10 +37,25 @@ public class MainActivity extends ActionBarActivity implements TextToSpeech.OnIn
         ListView listView = (ListView) findViewById(R.id.listView);
         listView.setAdapter(adapter);
 
+        adapterLanguage = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1);
+        for (Language lang : Language.LANGUAGES) {
+            adapterLanguage.add(lang.getName());
+        }
+
+        final Spinner spinnerFrom = (Spinner) findViewById(R.id.spinner);
+        spinnerFrom.setAdapter(adapterLanguage);
+
         Button button = (Button) findViewById(R.id.button);
         button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                Language currentLanguage = null;
+                for (Language lang : Language.LANGUAGES) {
+                    if (spinnerFrom.getSelectedItem().equals(lang.getName())) {
+                        currentLanguage = lang;
+                        break;
+                    }
+                }
                 try {
                     // インテント作成
                     Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH); // ACTION_WEB_SEARCH
@@ -48,8 +64,8 @@ public class MainActivity extends ActionBarActivity implements TextToSpeech.OnIn
                             RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
                     intent.putExtra(
                             RecognizerIntent.EXTRA_PROMPT,
-                            "お話しください"); // お好きな文字に変更できます
-
+                            "お話しください");
+                    intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, currentLanguage.getLocale().toString());
                     // インテント発行
                     startActivityForResult(intent, REQUEST_CODE);
                 } catch (ActivityNotFoundException e) {
@@ -61,6 +77,35 @@ public class MainActivity extends ActionBarActivity implements TextToSpeech.OnIn
         });
 
         tts = new TextToSpeech(getApplicationContext(), this);
+
+        final Spinner spinnerTo = (Spinner) findViewById(R.id.spinner2);
+        spinnerTo.setAdapter(adapterLanguage);
+        spinnerTo.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+
+                Locale locale = null;
+                String name = null;
+                for (Language lang : Language.LANGUAGES) {
+                    if (spinnerTo.getSelectedItem().equals(lang.getName())) {
+                        locale = lang.getLocale();
+                        name = lang.getName();
+                        break;
+                    }
+                }
+
+                if (tts.isLanguageAvailable(locale) >= TextToSpeech.LANG_AVAILABLE) {
+                    tts.setLanguage(locale);
+                } else {
+                    Toast.makeText(MainActivity.this, "TTSが" + name + "に対応していません", Toast.LENGTH_LONG);
+                }
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+
+            }
+        });
     }
 
     @Override
@@ -77,26 +122,47 @@ public class MainActivity extends ActionBarActivity implements TextToSpeech.OnIn
 
             fromText = resultsString;
 
+            Spinner spinnerFrom = (Spinner) findViewById(R.id.spinner);
+            Spinner spinnerTo = (Spinner) findViewById(R.id.spinner2);
+            String fromCode = null;
+            String toCode = null;
+            for (Language lang : Language.LANGUAGES) {
+                if (spinnerFrom.getSelectedItem().equals(lang.getName())) {
+                    fromCode = lang.getCode();
+                    break;
+                }
+            }
+            for (Language lang : Language.LANGUAGES) {
+                if (spinnerTo.getSelectedItem().equals(lang.getName())) {
+                    toCode = lang.getCode();
+                    break;
+                }
+            }
+
             // 翻訳APIにポスト
-            TransTask task = new TransTask() {
+            TransTask task = new TransTask(fromCode, toCode) {
+                @SuppressWarnings("deprecation")
                 @Override
                 protected void onPostExecute(String o) {
                     super.onPostExecute(o);
-                    pd.dismiss();
+                    Spinner spinnerTo = (Spinner) findViewById(R.id.spinner2);
                     adapter.add(fromText + "\n" + o);
-                    tts.speak(o, TextToSpeech.QUEUE_FLUSH, null);
+                    Language currentLanguage = null;
+                    for (Language lang : Language.LANGUAGES) {
+                        if (spinnerTo.getSelectedItem().equals(lang.getName())) {
+                            currentLanguage = lang;
+                            break;
+                        }
+                    }
+                    if (tts.isLanguageAvailable(currentLanguage.getLocale()) >= TextToSpeech.LANG_AVAILABLE) {
+                        tts.setLanguage(currentLanguage.getLocale());
+                        tts.speak(o, TextToSpeech.QUEUE_FLUSH, null);
+                    } else {
+                        Toast.makeText(MainActivity.this, "TTSが" + currentLanguage.getName() + "に対応していません", Toast.LENGTH_LONG);
+                    }
                 }
             };
             task.execute(resultsString);
-
-            // インジケータ表示
-            if (pd == null) {
-                pd = new ProgressDialog(this.getApplicationContext());
-            }
-//            pd.setMessage("翻訳中...");
-//            pd.setProgressStyle(ProgressDialog.STYLE_SPINNER);
-//            pd.setCancelable(false);
-//            pd.show();
         }
         super.onActivityResult(requestCode, resultCode, data);
     }

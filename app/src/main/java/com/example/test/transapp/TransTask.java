@@ -27,6 +27,13 @@ import java.net.URLEncoder;
 import java.util.ArrayList;
 
 public class TransTask extends AsyncTask<String, Void, String> {
+    private String mFromCode;
+    private String mToCode;
+
+    public TransTask(String fromCode, String toCode) {
+        mFromCode = fromCode;
+        mToCode = toCode;
+    }
 
     @Override
     protected String doInBackground(String... params) {
@@ -59,8 +66,8 @@ public class TransTask extends AsyncTask<String, Void, String> {
 
         // 翻訳APIを実行する
         String text = params[0];
-        String fromLang = "ja";
-        String toLang = "en";
+        String fromLang = mFromCode;
+        String toLang = mToCode;
 
         String resultString = "";
         try {
