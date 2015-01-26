@@ -109,6 +109,13 @@ public class MainActivity extends ActionBarActivity implements TextToSpeech.OnIn
     }
 
     @Override
+    protected void onDestroy() {
+        super.onDestroy();
+
+        tts.shutdown();
+    }
+
+    @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (requestCode == REQUEST_CODE && resultCode == RESULT_OK) {
             String resultsString = "認識失敗";
@@ -139,6 +146,7 @@ public class MainActivity extends ActionBarActivity implements TextToSpeech.OnIn
                 }
             }
 
+            System.out.println(fromCode + " -> " + toCode);
             // 翻訳APIにポスト
             TransTask task = new TransTask(fromCode, toCode) {
                 @SuppressWarnings("deprecation")
@@ -158,6 +166,7 @@ public class MainActivity extends ActionBarActivity implements TextToSpeech.OnIn
                         tts.setLanguage(currentLanguage.getLocale());
                         tts.speak(o, TextToSpeech.QUEUE_FLUSH, null);
                     } else {
+                        System.out.println("TTSが" + currentLanguage.getName() + "に非対応");
                         Toast.makeText(MainActivity.this, "TTSが" + currentLanguage.getName() + "に対応していません", Toast.LENGTH_LONG);
                     }
                 }
