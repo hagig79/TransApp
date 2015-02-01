@@ -1,5 +1,6 @@
 package com.example.test.transapp;
 
+import android.app.ProgressDialog;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.os.Bundle;
@@ -25,7 +26,9 @@ public class MainActivity extends ActionBarActivity implements TextToSpeech.OnIn
     private ArrayAdapter<String> adapter;
     private String fromText;
     private TextToSpeech tts;
+    private boolean ttsInitFlag = false;
     private ArrayAdapter<String> adapterLanguage;
+    private ProgressDialog pd;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -83,21 +86,22 @@ public class MainActivity extends ActionBarActivity implements TextToSpeech.OnIn
         spinnerTo.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-
-                Locale locale = null;
-                String name = null;
-                for (Language lang : Language.LANGUAGES) {
-                    if (spinnerTo.getSelectedItem().equals(lang.getName())) {
-                        locale = lang.getLocale();
-                        name = lang.getName();
-                        break;
+                if (ttsInitFlag) {
+                    Locale locale = null;
+                    String name = null;
+                    for (Language lang : Language.LANGUAGES) {
+                        if (spinnerTo.getSelectedItem().equals(lang.getName())) {
+                            locale = lang.getLocale();
+                            name = lang.getName();
+                            break;
+                        }
                     }
-                }
 
-                if (tts.isLanguageAvailable(locale) >= TextToSpeech.LANG_AVAILABLE) {
-                    tts.setLanguage(locale);
-                } else {
-                    Toast.makeText(MainActivity.this, "TTSが" + name + "に対応していません", Toast.LENGTH_LONG);
+                    if (tts.isLanguageAvailable(locale) >= TextToSpeech.LANG_AVAILABLE) {
+                        tts.setLanguage(locale);
+                    } else {
+                        Toast.makeText(MainActivity.this, "1. TTSが" + name + "に対応していません", Toast.LENGTH_LONG).show();
+                    }
                 }
             }
 
@@ -106,6 +110,8 @@ public class MainActivity extends ActionBarActivity implements TextToSpeech.OnIn
 
             }
         });
+
+        pd = new ProgressDialog(this);
     }
 
     @Override
@@ -167,7 +173,7 @@ public class MainActivity extends ActionBarActivity implements TextToSpeech.OnIn
                         tts.speak(o, TextToSpeech.QUEUE_FLUSH, null);
                     } else {
                         System.out.println("TTSが" + currentLanguage.getName() + "に非対応");
-                        Toast.makeText(MainActivity.this, "TTSが" + currentLanguage.getName() + "に対応していません", Toast.LENGTH_LONG);
+                        Toast.makeText(MainActivity.this, "2. TTSが" + currentLanguage.getName() + "に対応していません", Toast.LENGTH_LONG).show();
                     }
                 }
             };
@@ -201,10 +207,11 @@ public class MainActivity extends ActionBarActivity implements TextToSpeech.OnIn
     @Override
     public void onInit(int status) {
         if (status == TextToSpeech.SUCCESS) {
+            ttsInitFlag = true;
             if (tts.isLanguageAvailable(Locale.ENGLISH) >= TextToSpeech.LANG_AVAILABLE) {
                 tts.setLanguage(Locale.ENGLISH);
             } else {
-                Toast.makeText(this, "TTSが英語に対応していません", Toast.LENGTH_LONG);
+                Toast.makeText(this, "3. TTSが英語に対応していません", Toast.LENGTH_LONG).show();
             }
         }
     }
