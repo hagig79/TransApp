@@ -68,6 +68,7 @@ public class MainActivity extends ActionBarActivity implements TextToSpeech.OnIn
                     intent.putExtra(
                             RecognizerIntent.EXTRA_PROMPT,
                             "お話しください");
+                    System.out.println(currentLanguage.getLocale().toString());
                     intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, currentLanguage.getLocale().toString());
                     // インテント発行
                     startActivityForResult(intent, REQUEST_CODE);
@@ -78,7 +79,6 @@ public class MainActivity extends ActionBarActivity implements TextToSpeech.OnIn
                 }
             }
         });
-
         tts = new TextToSpeech(getApplicationContext(), this);
 
         final Spinner spinnerTo = (Spinner) findViewById(R.id.spinner2);
@@ -198,6 +198,10 @@ public class MainActivity extends ActionBarActivity implements TextToSpeech.OnIn
 
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_settings) {
+            Intent intent = new Intent();
+            intent.setAction("com.android.settings.TTS_SETTINGS");
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(intent);
             return true;
         }
 
@@ -208,10 +212,22 @@ public class MainActivity extends ActionBarActivity implements TextToSpeech.OnIn
     public void onInit(int status) {
         if (status == TextToSpeech.SUCCESS) {
             ttsInitFlag = true;
-            if (tts.isLanguageAvailable(Locale.ENGLISH) >= TextToSpeech.LANG_AVAILABLE) {
-                tts.setLanguage(Locale.ENGLISH);
+
+            Locale locale = null;
+            String name = null;
+            Spinner spinnerTo = (Spinner) findViewById(R.id.spinner2);
+            for (Language lang : Language.LANGUAGES) {
+                if (spinnerTo.getSelectedItem().equals(lang.getName())) {
+                    locale = lang.getLocale();
+                    name = lang.getName();
+                    break;
+                }
+            }
+
+            if (tts.isLanguageAvailable(locale) >= TextToSpeech.LANG_AVAILABLE) {
+                tts.setLanguage(locale);
             } else {
-                Toast.makeText(this, "3. TTSが英語に対応していません", Toast.LENGTH_LONG).show();
+                Toast.makeText(this, "3. TTSが" + name + "に対応していません", Toast.LENGTH_LONG).show();
             }
         }
     }
